@@ -37,7 +37,9 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
-    "compression": "^1.7.4"
+    "compression": "^1.7.4",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
   },
   "devDependencies": {
     "@hookform/resolvers": "^5.2.1",
