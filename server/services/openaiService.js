@@ -1,15 +1,14 @@
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
+import OpenAI from "openai";
+import dotenv from "dotenv";
 
 dotenv.config();
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 class OpenAIService {
-  
   /**
    * Analyze resume against job description for compatibility
    */
@@ -44,33 +43,34 @@ class OpenAIService {
         messages: [
           {
             role: "system",
-            content: "You are an expert HR analyst and ATS system specializing in resume-job description matching. Provide accurate, detailed analysis in valid JSON format."
+            content:
+              "You are an expert HR analyst and ATS system specializing in resume-job description matching. Provide accurate, detailed analysis in valid JSON format.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.3,
-        max_tokens: 1500
+        max_tokens: 1500,
       });
 
       const response = completion.choices[0].message.content;
       return JSON.parse(response);
     } catch (error) {
-      console.error('Error in analyzeResumeJDMatch:', error);
-      throw new Error('Failed to analyze resume-JD match');
+      console.error("Error in analyzeResumeJDMatch:", error);
+      throw new Error("Failed to analyze resume-JD match");
     }
   }
 
   /**
    * Generate resume improvement suggestions
    */
-  async generateResumeImprovements(resumeText, targetRole = '') {
+  async generateResumeImprovements(resumeText, targetRole = "") {
     try {
       const prompt = `
         Analyze the following resume and provide specific improvement suggestions to make it more compelling and ATS-friendly.
-        ${targetRole ? `Target Role: ${targetRole}` : ''}
+        ${targetRole ? `Target Role: ${targetRole}` : ""}
         
         RESUME:
         ${resumeText}
@@ -100,22 +100,23 @@ class OpenAIService {
         messages: [
           {
             role: "system",
-            content: "You are a professional resume writer and career coach. Provide actionable, specific improvement suggestions in valid JSON format."
+            content:
+              "You are a professional resume writer and career coach. Provide actionable, specific improvement suggestions in valid JSON format.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.4,
-        max_tokens: 2000
+        max_tokens: 2000,
       });
 
       const response = completion.choices[0].message.content;
       return JSON.parse(response);
     } catch (error) {
-      console.error('Error in generateResumeImprovements:', error);
-      throw new Error('Failed to generate resume improvements');
+      console.error("Error in generateResumeImprovements:", error);
+      throw new Error("Failed to generate resume improvements");
     }
   }
 
@@ -157,29 +158,34 @@ class OpenAIService {
         messages: [
           {
             role: "system",
-            content: "You are an expert technical recruiter and hiring manager. Provide thorough, unbiased candidate assessments in valid JSON format."
+            content:
+              "You are an expert technical recruiter and hiring manager. Provide thorough, unbiased candidate assessments in valid JSON format.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.3,
-        max_tokens: 1800
+        max_tokens: 1800,
       });
 
       const response = completion.choices[0].message.content;
       return JSON.parse(response);
     } catch (error) {
-      console.error('Error in screenCandidate:', error);
-      throw new Error('Failed to screen candidate');
+      console.error("Error in screenCandidate:", error);
+      throw new Error("Failed to screen candidate");
     }
   }
 
   /**
    * Generate AI-powered student recommendations for placement drives
    */
-  async generateStudentRecommendations(students, jobDescription, driveRequirements) {
+  async generateStudentRecommendations(
+    students,
+    jobDescription,
+    driveRequirements,
+  ) {
     try {
       const prompt = `
         Analyze the following students for a placement drive and rank them by fit score.
@@ -216,22 +222,23 @@ class OpenAIService {
         messages: [
           {
             role: "system",
-            content: "You are an AI placement coordinator specializing in matching students to job opportunities. Provide fair, unbiased rankings in valid JSON format."
+            content:
+              "You are an AI placement coordinator specializing in matching students to job opportunities. Provide fair, unbiased rankings in valid JSON format.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.3,
-        max_tokens: 2500
+        max_tokens: 2500,
       });
 
       const response = completion.choices[0].message.content;
       return JSON.parse(response);
     } catch (error) {
-      console.error('Error in generateStudentRecommendations:', error);
-      throw new Error('Failed to generate student recommendations');
+      console.error("Error in generateStudentRecommendations:", error);
+      throw new Error("Failed to generate student recommendations");
     }
   }
 
@@ -269,22 +276,23 @@ class OpenAIService {
         messages: [
           {
             role: "system",
-            content: "You are a professional HR communication specialist. Create formal, welcoming offer emails in valid JSON format."
+            content:
+              "You are a professional HR communication specialist. Create formal, welcoming offer emails in valid JSON format.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.4,
-        max_tokens: 1200
+        max_tokens: 1200,
       });
 
       const response = completion.choices[0].message.content;
       return JSON.parse(response);
     } catch (error) {
-      console.error('Error in generateOfferEmail:', error);
-      throw new Error('Failed to generate offer email');
+      console.error("Error in generateOfferEmail:", error);
+      throw new Error("Failed to generate offer email");
     }
   }
 
@@ -319,22 +327,23 @@ class OpenAIService {
         messages: [
           {
             role: "system",
-            content: "You are a placement analytics expert specializing in university career services. Provide data-driven insights in valid JSON format."
+            content:
+              "You are a placement analytics expert specializing in university career services. Provide data-driven insights in valid JSON format.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.3,
-        max_tokens: 2000
+        max_tokens: 2000,
       });
 
       const response = completion.choices[0].message.content;
       return JSON.parse(response);
     } catch (error) {
-      console.error('Error in generatePlacementInsights:', error);
-      throw new Error('Failed to generate placement insights');
+      console.error("Error in generatePlacementInsights:", error);
+      throw new Error("Failed to generate placement insights");
     }
   }
 
@@ -391,22 +400,23 @@ class OpenAIService {
         messages: [
           {
             role: "system",
-            content: "You are an expert resume parser. Extract accurate information and structure it in valid JSON format."
+            content:
+              "You are an expert resume parser. Extract accurate information and structure it in valid JSON format.",
           },
           {
             role: "user",
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.1,
-        max_tokens: 1500
+        max_tokens: 1500,
       });
 
       const response = completion.choices[0].message.content;
       return JSON.parse(response);
     } catch (error) {
-      console.error('Error in extractResumeData:', error);
-      throw new Error('Failed to extract resume data');
+      console.error("Error in extractResumeData:", error);
+      throw new Error("Failed to extract resume data");
     }
   }
 }

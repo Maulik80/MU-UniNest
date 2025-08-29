@@ -1,9 +1,9 @@
-import openaiService from '../services/openaiService.js';
-import Student from '../models/Student.js';
-import Company from '../models/Company.js';
-import PlacementDrive from '../models/PlacementDrive.js';
-import Application from '../models/Application.js';
-import Offer from '../models/Offer.js';
+import openaiService from "../services/openaiService.js";
+import Student from "../models/Student.js";
+import Company from "../models/Company.js";
+import PlacementDrive from "../models/PlacementDrive.js";
+import Application from "../models/Application.js";
+import Offer from "../models/Offer.js";
 
 // @desc    Analyze resume against job description
 // @route   POST /api/v1/ai/resume/analyze
@@ -15,15 +15,18 @@ export const analyzeResumeJD = async (req, res) => {
     if (!resumeText || !jobDescription) {
       return res.status(400).json({
         success: false,
-        message: 'Resume text and job description are required'
+        message: "Resume text and job description are required",
       });
     }
 
     // Analyze using OpenAI
-    const analysis = await openaiService.analyzeResumeJDMatch(resumeText, jobDescription);
+    const analysis = await openaiService.analyzeResumeJDMatch(
+      resumeText,
+      jobDescription,
+    );
 
     // If student is analyzing their own resume, optionally save the analysis
-    if (req.userType === 'student' && saveAnalysis) {
+    if (req.userType === "student" && saveAnalysis) {
       const student = await Student.findById(req.user._id);
       // We could extend the Student model to store analysis history
       // For now, we'll just return the analysis
@@ -34,15 +37,16 @@ export const analyzeResumeJD = async (req, res) => {
       data: {
         analysis,
         timestamp: new Date(),
-        creditsUsed: 1 // Track AI usage for billing
+        creditsUsed: 1, // Track AI usage for billing
       },
-      message: 'Resume analysis completed successfully'
+      message: "Resume analysis completed successfully",
     });
   } catch (error) {
-    console.error('AI Resume Analysis Error:', error);
+    console.error("AI Resume Analysis Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to analyze resume. AI service may be temporarily unavailable.'
+      message:
+        "Failed to analyze resume. AI service may be temporarily unavailable.",
     });
   }
 };
@@ -57,28 +61,32 @@ export const generateResumeImprovements = async (req, res) => {
     if (!resumeText) {
       return res.status(400).json({
         success: false,
-        message: 'Resume text is required'
+        message: "Resume text is required",
       });
     }
 
     // Generate improvements using OpenAI
-    const improvements = await openaiService.generateResumeImprovements(resumeText, targetRole);
+    const improvements = await openaiService.generateResumeImprovements(
+      resumeText,
+      targetRole,
+    );
 
     res.status(200).json({
       success: true,
       data: {
         improvements,
-        targetRole: targetRole || 'General',
+        targetRole: targetRole || "General",
         timestamp: new Date(),
-        creditsUsed: 1
+        creditsUsed: 1,
       },
-      message: 'Resume improvement suggestions generated successfully'
+      message: "Resume improvement suggestions generated successfully",
     });
   } catch (error) {
-    console.error('AI Resume Improvement Error:', error);
+    console.error("AI Resume Improvement Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate improvement suggestions. AI service may be temporarily unavailable.'
+      message:
+        "Failed to generate improvement suggestions. AI service may be temporarily unavailable.",
     });
   }
 };
@@ -93,18 +101,19 @@ export const screenCandidate = async (req, res) => {
     if (!candidateId || !jobRequirements) {
       return res.status(400).json({
         success: false,
-        message: 'Candidate ID and job requirements are required'
+        message: "Candidate ID and job requirements are required",
       });
     }
 
     // Get candidate profile
-    const candidate = await Student.findById(candidateId)
-      .populate('academicInfo.university academicInfo.department');
+    const candidate = await Student.findById(candidateId).populate(
+      "academicInfo.university academicInfo.department",
+    );
 
     if (!candidate) {
       return res.status(404).json({
         success: false,
-        message: 'Candidate not found'
+        message: "Candidate not found",
       });
     }
 
@@ -116,19 +125,26 @@ export const screenCandidate = async (req, res) => {
       projects: candidate.projects,
       internships: candidate.internships,
       certifications: candidate.certifications,
-      achievements: candidate.achievements
+      achievements: candidate.achievements,
     };
 
     // Screen using OpenAI
-    const screening = await openaiService.screenCandidate(candidateProfile, jobRequirements);
+    const screening = await openaiService.screenCandidate(
+      candidateProfile,
+      jobRequirements,
+    );
 
     // If this is for a specific drive, save the screening result
     if (driveId) {
       const drive = await PlacementDrive.findById(driveId);
-      if (drive && (req.userType === 'company' && drive.company.equals(req.user._id))) {
+      if (
+        drive &&
+        req.userType === "company" &&
+        drive.company.equals(req.user._id)
+      ) {
         // Update the drive with AI screening results
         const existingCandidate = drive.aiInsights.recommendedStudents.find(
-          s => s.student.equals(candidateId)
+          (s) => s.student.equals(candidateId),
         );
 
         if (existingCandidate) {
@@ -139,7 +155,7 @@ export const screenCandidate = async (req, res) => {
             student: candidateId,
             score: screening.fitScore,
             reasons: screening.strengths,
-            generatedAt: new Date()
+            generatedAt: new Date(),
           });
         }
 
@@ -153,15 +169,16 @@ export const screenCandidate = async (req, res) => {
         candidateId,
         screening,
         timestamp: new Date(),
-        creditsUsed: 1
+        creditsUsed: 1,
       },
-      message: 'Candidate screening completed successfully'
+      message: "Candidate screening completed successfully",
     });
   } catch (error) {
-    console.error('AI Candidate Screening Error:', error);
+    console.error("AI Candidate Screening Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to screen candidate. AI service may be temporarily unavailable.'
+      message:
+        "Failed to screen candidate. AI service may be temporarily unavailable.",
     });
   }
 };
@@ -176,46 +193,54 @@ export const generateStudentRecommendations = async (req, res) => {
     if (!driveId) {
       return res.status(400).json({
         success: false,
-        message: 'Drive ID is required'
+        message: "Drive ID is required",
       });
     }
 
     // Get placement drive details
-    const drive = await PlacementDrive.findById(driveId)
-      .populate('company university');
+    const drive =
+      await PlacementDrive.findById(driveId).populate("company university");
 
     if (!drive) {
       return res.status(404).json({
         success: false,
-        message: 'Placement drive not found'
+        message: "Placement drive not found",
       });
     }
 
     // Build filter criteria
     const filterCriteria = {
-      'academicInfo.university': drive.university._id,
-      'academicInfo.cgpa': { $gte: minCGPA || drive.eligibilityCriteria.minimumCGPA },
+      "academicInfo.university": drive.university._id,
+      "academicInfo.cgpa": {
+        $gte: minCGPA || drive.eligibilityCriteria.minimumCGPA,
+      },
       isActive: true,
-      verificationStatus: { $ne: 'rejected' }
+      verificationStatus: { $ne: "rejected" },
     };
 
     if (departments && departments.length > 0) {
-      filterCriteria['academicInfo.department'] = { $in: departments };
+      filterCriteria["academicInfo.department"] = { $in: departments };
     } else if (drive.eligibilityCriteria.departments.length > 0) {
-      filterCriteria['academicInfo.department'] = { $in: drive.eligibilityCriteria.departments };
+      filterCriteria["academicInfo.department"] = {
+        $in: drive.eligibilityCriteria.departments,
+      };
     }
 
     if (drive.eligibilityCriteria.courses.length > 0) {
-      filterCriteria['academicInfo.course'] = { $in: drive.eligibilityCriteria.courses };
+      filterCriteria["academicInfo.course"] = {
+        $in: drive.eligibilityCriteria.courses,
+      };
     }
 
     if (drive.eligibilityCriteria.batches.length > 0) {
-      filterCriteria['academicInfo.batch'] = { $in: drive.eligibilityCriteria.batches };
+      filterCriteria["academicInfo.batch"] = {
+        $in: drive.eligibilityCriteria.batches,
+      };
     }
 
     // Get eligible students
     const students = await Student.find(filterCriteria)
-      .populate('academicInfo.department', 'name')
+      .populate("academicInfo.department", "name")
       .limit(limit * 2) // Get more students to allow AI to filter
       .lean();
 
@@ -224,9 +249,9 @@ export const generateStudentRecommendations = async (req, res) => {
         success: true,
         data: {
           recommendations: [],
-          summary: 'No eligible students found matching the criteria'
+          summary: "No eligible students found matching the criteria",
         },
-        message: 'No students found matching the criteria'
+        message: "No students found matching the criteria",
       });
     }
 
@@ -238,23 +263,25 @@ export const generateStudentRecommendations = async (req, res) => {
       experienceRequired: drive.jobDetails.experienceRequired,
       minimumCGPA: drive.eligibilityCriteria.minimumCGPA,
       eligibleDepartments: drive.eligibilityCriteria.departments,
-      location: drive.jobDetails.locations
+      location: drive.jobDetails.locations,
     };
 
     // Generate recommendations using OpenAI
     const recommendations = await openaiService.generateStudentRecommendations(
-      students, 
-      jobDescription, 
-      driveRequirements
+      students,
+      jobDescription,
+      driveRequirements,
     );
 
     // Update drive with AI insights
-    drive.aiInsights.recommendedStudents = recommendations.recommendations.map(rec => ({
-      student: rec.studentId,
-      score: rec.fitScore,
-      reasons: rec.reasons,
-      generatedAt: new Date()
-    }));
+    drive.aiInsights.recommendedStudents = recommendations.recommendations.map(
+      (rec) => ({
+        student: rec.studentId,
+        score: rec.fitScore,
+        reasons: rec.reasons,
+        generatedAt: new Date(),
+      }),
+    );
     drive.aiInsights.analysisComplete = true;
     drive.aiInsights.lastAnalysis = new Date();
     await drive.save();
@@ -268,15 +295,16 @@ export const generateStudentRecommendations = async (req, res) => {
         insights: recommendations.insights,
         totalStudentsAnalyzed: students.length,
         timestamp: new Date(),
-        creditsUsed: Math.ceil(students.length / 10) // Rough estimate
+        creditsUsed: Math.ceil(students.length / 10), // Rough estimate
       },
-      message: 'Student recommendations generated successfully'
+      message: "Student recommendations generated successfully",
     });
   } catch (error) {
-    console.error('AI Student Recommendations Error:', error);
+    console.error("AI Student Recommendations Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate student recommendations. AI service may be temporarily unavailable.'
+      message:
+        "Failed to generate student recommendations. AI service may be temporarily unavailable.",
     });
   }
 };
@@ -286,31 +314,32 @@ export const generateStudentRecommendations = async (req, res) => {
 // @access  Private (Company, University)
 export const generateOfferEmail = async (req, res) => {
   try {
-    const { offerId, tone = 'professional', includeDetails = true } = req.body;
+    const { offerId, tone = "professional", includeDetails = true } = req.body;
 
     if (!offerId) {
       return res.status(400).json({
         success: false,
-        message: 'Offer ID is required'
+        message: "Offer ID is required",
       });
     }
 
     // Get offer details
-    const offer = await Offer.findById(offerId)
-      .populate('student company placementDrive');
+    const offer = await Offer.findById(offerId).populate(
+      "student company placementDrive",
+    );
 
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
     // Verify access rights
-    if (req.userType === 'company' && !offer.company._id.equals(req.user._id)) {
+    if (req.userType === "company" && !offer.company._id.equals(req.user._id)) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied'
+        message: "Access denied",
       });
     }
 
@@ -321,34 +350,34 @@ export const generateOfferEmail = async (req, res) => {
       location: offer.offerDetails.location,
       package: offer.compensation.totalPackage,
       joiningDate: offer.offerDetails.joiningDate,
-      bondPeriod: offer.terms.bondPeriod
+      bondPeriod: offer.terms.bondPeriod,
     };
 
     const studentProfile = {
       fullName: offer.student.fullName,
-      email: offer.student.personalInfo.email
+      email: offer.student.personalInfo.email,
     };
 
     const companyInfo = {
       name: offer.company.name,
       sector: offer.company.companyDetails.sector,
-      website: offer.company.companyDetails.website
+      website: offer.company.companyDetails.website,
     };
 
     // Generate email using OpenAI
     const emailContent = await openaiService.generateOfferEmail(
-      offerDetails, 
-      studentProfile, 
-      companyInfo
+      offerDetails,
+      studentProfile,
+      companyInfo,
     );
 
     // Mark as AI generated
     offer.aiGeneration = {
       wasAIGenerated: true,
-      template: 'email_offer',
+      template: "email_offer",
       generatedAt: new Date(),
       generatedBy: req.user._id,
-      generatedByModel: req.userType === 'company' ? 'Company' : 'University'
+      generatedByModel: req.userType === "company" ? "Company" : "University",
     };
     await offer.save();
 
@@ -358,15 +387,16 @@ export const generateOfferEmail = async (req, res) => {
         offerId,
         emailContent,
         timestamp: new Date(),
-        creditsUsed: 1
+        creditsUsed: 1,
       },
-      message: 'Offer email content generated successfully'
+      message: "Offer email content generated successfully",
     });
   } catch (error) {
-    console.error('AI Offer Email Generation Error:', error);
+    console.error("AI Offer Email Generation Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate offer email. AI service may be temporarily unavailable.'
+      message:
+        "Failed to generate offer email. AI service may be temporarily unavailable.",
     });
   }
 };
@@ -376,7 +406,11 @@ export const generateOfferEmail = async (req, res) => {
 // @access  Private (University, Admin)
 export const generatePlacementInsights = async (req, res) => {
   try {
-    const { universityId, timeRange = '1year', includeComparisons = true } = req.body;
+    const {
+      universityId,
+      timeRange = "1year",
+      includeComparisons = true,
+    } = req.body;
 
     // If no university ID provided, use current user's university
     const targetUniversityId = universityId || req.user._id;
@@ -384,15 +418,15 @@ export const generatePlacementInsights = async (req, res) => {
     // Get placement data for the specified time range
     const endDate = new Date();
     const startDate = new Date();
-    
+
     switch (timeRange) {
-      case '6months':
+      case "6months":
         startDate.setMonth(endDate.getMonth() - 6);
         break;
-      case '1year':
+      case "1year":
         startDate.setFullYear(endDate.getFullYear() - 1);
         break;
-      case '2years':
+      case "2years":
         startDate.setFullYear(endDate.getFullYear() - 2);
         break;
       default:
@@ -403,24 +437,24 @@ export const generatePlacementInsights = async (req, res) => {
     const [drives, applications, offers, students] = await Promise.all([
       PlacementDrive.find({
         university: targetUniversityId,
-        createdAt: { $gte: startDate, $lte: endDate }
-      }).populate('company', 'name companyDetails.sector'),
-      
+        createdAt: { $gte: startDate, $lte: endDate },
+      }).populate("company", "name companyDetails.sector"),
+
       Application.find({
         university: targetUniversityId,
-        createdAt: { $gte: startDate, $lte: endDate }
-      }).populate('student', 'academicInfo'),
-      
+        createdAt: { $gte: startDate, $lte: endDate },
+      }).populate("student", "academicInfo"),
+
       Offer.find({
         university: targetUniversityId,
-        createdAt: { $gte: startDate, $lte: endDate }
+        createdAt: { $gte: startDate, $lte: endDate },
       }),
-      
+
       Student.find({
-        'academicInfo.university': targetUniversityId,
-        'placementStatus.isPlaced': true,
-        'placementStatus.placementDate': { $gte: startDate, $lte: endDate }
-      })
+        "academicInfo.university": targetUniversityId,
+        "placementStatus.isPlaced": true,
+        "placementStatus.placementDate": { $gte: startDate, $lte: endDate },
+      }),
     ]);
 
     // Prepare placement data for AI analysis
@@ -429,7 +463,7 @@ export const generatePlacementInsights = async (req, res) => {
       totalApplications: applications.length,
       totalOffers: offers.length,
       totalPlacements: students.length,
-      
+
       // Department-wise breakdown
       departmentStats: applications.reduce((acc, app) => {
         const dept = app.student.academicInfo.department;
@@ -437,39 +471,55 @@ export const generatePlacementInsights = async (req, res) => {
         acc[dept].applications++;
         return acc;
       }, {}),
-      
+
       // Company sectors
       companySectors: drives.reduce((acc, drive) => {
         const sector = drive.company.companyDetails.sector;
         acc[sector] = (acc[sector] || 0) + 1;
         return acc;
       }, {}),
-      
+
       // Package distribution
       packageStats: {
-        averagePackage: offers.reduce((sum, offer) => sum + offer.compensation.totalPackage, 0) / offers.length,
-        highestPackage: Math.max(...offers.map(o => o.compensation.totalPackage)),
-        lowestPackage: Math.min(...offers.map(o => o.compensation.totalPackage))
+        averagePackage:
+          offers.reduce(
+            (sum, offer) => sum + offer.compensation.totalPackage,
+            0,
+          ) / offers.length,
+        highestPackage: Math.max(
+          ...offers.map((o) => o.compensation.totalPackage),
+        ),
+        lowestPackage: Math.min(
+          ...offers.map((o) => o.compensation.totalPackage),
+        ),
       },
-      
+
       timeRange,
-      analysisDate: new Date()
+      analysisDate: new Date(),
     };
 
     // University statistics for context
     const universityStats = {
-      totalStudents: await Student.countDocuments({ 'academicInfo.university': targetUniversityId }),
-      activeStudents: await Student.countDocuments({ 
-        'academicInfo.university': targetUniversityId, 
-        isActive: true 
+      totalStudents: await Student.countDocuments({
+        "academicInfo.university": targetUniversityId,
       }),
-      placementRate: (students.length / await Student.countDocuments({ 
-        'academicInfo.university': targetUniversityId 
-      })) * 100
+      activeStudents: await Student.countDocuments({
+        "academicInfo.university": targetUniversityId,
+        isActive: true,
+      }),
+      placementRate:
+        (students.length /
+          (await Student.countDocuments({
+            "academicInfo.university": targetUniversityId,
+          }))) *
+        100,
     };
 
     // Generate insights using OpenAI
-    const insights = await openaiService.generatePlacementInsights(placementData, universityStats);
+    const insights = await openaiService.generatePlacementInsights(
+      placementData,
+      universityStats,
+    );
 
     res.status(200).json({
       success: true,
@@ -479,15 +529,16 @@ export const generatePlacementInsights = async (req, res) => {
         insights,
         timeRange,
         timestamp: new Date(),
-        creditsUsed: 2 // More complex analysis
+        creditsUsed: 2, // More complex analysis
       },
-      message: 'Placement insights generated successfully'
+      message: "Placement insights generated successfully",
     });
   } catch (error) {
-    console.error('AI Placement Insights Error:', error);
+    console.error("AI Placement Insights Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate placement insights. AI service may be temporarily unavailable.'
+      message:
+        "Failed to generate placement insights. AI service may be temporarily unavailable.",
     });
   }
 };
@@ -502,7 +553,7 @@ export const extractResumeData = async (req, res) => {
     if (!resumeText) {
       return res.status(400).json({
         success: false,
-        message: 'Resume text is required'
+        message: "Resume text is required",
       });
     }
 
@@ -510,38 +561,42 @@ export const extractResumeData = async (req, res) => {
     const extractedData = await openaiService.extractResumeData(resumeText);
 
     // If student ID is provided and user is authorized, update student profile
-    if (studentId && (req.userType === 'university' || 
-        (req.userType === 'student' && req.user._id.toString() === studentId))) {
-      
+    if (
+      studentId &&
+      (req.userType === "university" ||
+        (req.userType === "student" && req.user._id.toString() === studentId))
+    ) {
       const student = await Student.findById(studentId);
       if (student) {
         // Update student profile with extracted data (selectively)
         if (extractedData.skills && extractedData.skills.length > 0) {
-          const newSkills = extractedData.skills.map(skill => ({
+          const newSkills = extractedData.skills.map((skill) => ({
             name: skill,
-            level: 'Intermediate',
-            category: 'Other',
-            isVerified: false
+            level: "Intermediate",
+            category: "Other",
+            isVerified: false,
           }));
-          
+
           // Merge with existing skills (avoid duplicates)
-          const existingSkillNames = student.skills.map(s => s.name.toLowerCase());
-          const uniqueNewSkills = newSkills.filter(
-            skill => !existingSkillNames.includes(skill.name.toLowerCase())
+          const existingSkillNames = student.skills.map((s) =>
+            s.name.toLowerCase(),
           );
-          
+          const uniqueNewSkills = newSkills.filter(
+            (skill) => !existingSkillNames.includes(skill.name.toLowerCase()),
+          );
+
           student.skills.push(...uniqueNewSkills);
         }
 
         // Update projects
         if (extractedData.projects && extractedData.projects.length > 0) {
-          const newProjects = extractedData.projects.map(project => ({
+          const newProjects = extractedData.projects.map((project) => ({
             title: project.title,
             description: project.description,
             technologies: project.technologies || [],
-            isVerified: false
+            isVerified: false,
           }));
-          
+
           student.projects.push(...newProjects);
         }
 
@@ -554,15 +609,16 @@ export const extractResumeData = async (req, res) => {
       data: {
         extractedData,
         timestamp: new Date(),
-        creditsUsed: 1
+        creditsUsed: 1,
       },
-      message: 'Resume data extracted successfully'
+      message: "Resume data extracted successfully",
     });
   } catch (error) {
-    console.error('AI Resume Extraction Error:', error);
+    console.error("AI Resume Extraction Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to extract resume data. AI service may be temporarily unavailable.'
+      message:
+        "Failed to extract resume data. AI service may be temporarily unavailable.",
     });
   }
 };
@@ -578,24 +634,24 @@ export const getAIUsageStats = async (req, res) => {
       totalRequests: 0,
       creditsUsed: 0,
       mostUsedFeatures: [
-        { feature: 'Resume Analysis', usage: 0 },
-        { feature: 'Student Recommendations', usage: 0 },
-        { feature: 'Candidate Screening', usage: 0 }
+        { feature: "Resume Analysis", usage: 0 },
+        { feature: "Student Recommendations", usage: 0 },
+        { feature: "Candidate Screening", usage: 0 },
       ],
       monthlyUsage: [],
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     };
 
     res.status(200).json({
       success: true,
       data: stats,
-      message: 'AI usage statistics retrieved successfully'
+      message: "AI usage statistics retrieved successfully",
     });
   } catch (error) {
-    console.error('AI Usage Stats Error:', error);
+    console.error("AI Usage Stats Error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve AI usage statistics'
+      message: "Failed to retrieve AI usage statistics",
     });
   }
 };

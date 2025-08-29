@@ -1,46 +1,46 @@
-import Student from '../models/Student.js';
-import PlacementDrive from '../models/PlacementDrive.js';
-import Application from '../models/Application.js';
-import Offer from '../models/Offer.js';
-import openaiService from '../services/openaiService.js';
-import { generateToken, sendTokenResponse } from '../middlewares/auth.js';
-import bcrypt from 'bcryptjs';
-import fs from 'fs';
-import path from 'path';
+import Student from "../models/Student.js";
+import PlacementDrive from "../models/PlacementDrive.js";
+import Application from "../models/Application.js";
+import Offer from "../models/Offer.js";
+import openaiService from "../services/openaiService.js";
+import { generateToken, sendTokenResponse } from "../middlewares/auth.js";
+import bcrypt from "bcryptjs";
+import fs from "fs";
+import path from "path";
 
 // @desc    Register student
 // @route   POST /api/v1/students/register
 // @access  Public
 export const registerStudent = async (req, res) => {
   try {
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      password, 
-      dateOfBirth, 
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      dateOfBirth,
       gender,
       university,
       department,
       course,
       batch,
       prnNumber,
-      cgpa 
+      cgpa,
     } = req.body;
 
     // Check if student already exists
-    const existingStudent = await Student.findOne({ 
+    const existingStudent = await Student.findOne({
       $or: [
-        { 'personalInfo.email': email },
-        { 'academicInfo.prnNumber': prnNumber }
-      ]
+        { "personalInfo.email": email },
+        { "academicInfo.prnNumber": prnNumber },
+      ],
     });
 
     if (existingStudent) {
       return res.status(400).json({
         success: false,
-        message: 'Student already exists with this email or PRN number'
+        message: "Student already exists with this email or PRN number",
       });
     }
 
@@ -52,7 +52,7 @@ export const registerStudent = async (req, res) => {
         email,
         phone,
         dateOfBirth,
-        gender
+        gender,
       },
       academicInfo: {
         university,
@@ -60,17 +60,17 @@ export const registerStudent = async (req, res) => {
         course,
         batch,
         prnNumber,
-        cgpa
+        cgpa,
       },
-      password
+      password,
     });
 
-    sendTokenResponse(student, 201, res, 'student');
+    sendTokenResponse(student, 201, res, "student");
   } catch (error) {
-    console.error('Register student error:', error);
+    console.error("Register student error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -85,20 +85,20 @@ export const loginStudent = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password'
+        message: "Please provide email and password",
       });
     }
 
     // Find student and include password for comparison
-    const student = await Student.findOne({ 'personalInfo.email': email })
-      .select('+password')
-      .populate('academicInfo.university', 'name')
-      .populate('academicInfo.department', 'name');
+    const student = await Student.findOne({ "personalInfo.email": email })
+      .select("+password")
+      .populate("academicInfo.university", "name")
+      .populate("academicInfo.department", "name");
 
     if (!student) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
@@ -106,26 +106,30 @@ export const loginStudent = async (req, res) => {
     if (student.isLocked()) {
       return res.status(423).json({
         success: false,
-        message: 'Account is temporarily locked due to too many failed login attempts'
+        message:
+          "Account is temporarily locked due to too many failed login attempts",
       });
     }
 
     // Check password
-    const isPasswordCorrect = await student.correctPassword(password, student.password);
+    const isPasswordCorrect = await student.correctPassword(
+      password,
+      student.password,
+    );
 
     if (!isPasswordCorrect) {
       // Increment login attempts
       await student.incLoginAttempts();
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
     // Reset login attempts on successful login
     if (student.loginAttempts > 0) {
       await student.updateOne({
-        $unset: { loginAttempts: 1, lockUntil: 1 }
+        $unset: { loginAttempts: 1, lockUntil: 1 },
       });
     }
 
@@ -133,12 +137,12 @@ export const loginStudent = async (req, res) => {
     student.lastLogin = new Date();
     await student.save();
 
-    sendTokenResponse(student, 200, res, 'student');
+    sendTokenResponse(student, 200, res, "student");
   } catch (error) {
-    console.error('Login student error:', error);
+    console.error("Login student error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -149,20 +153,20 @@ export const loginStudent = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id)
-      .populate('academicInfo.university', 'name code')
-      .populate('academicInfo.department', 'name code')
-      .populate('applications')
-      .populate('offers');
+      .populate("academicInfo.university", "name code")
+      .populate("academicInfo.department", "name code")
+      .populate("applications")
+      .populate("offers");
 
     res.status(200).json({
       success: true,
-      data: student
+      data: student,
     });
   } catch (error) {
-    console.error('Get profile error:', error);
+    console.error("Get profile error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -177,25 +181,24 @@ export const updateProfile = async (req, res) => {
 
     // Handle profile picture upload
     if (req.fileInfo && req.fileInfo.url) {
-      updateData['personalInfo.profilePicture'] = req.fileInfo.url;
+      updateData["personalInfo.profilePicture"] = req.fileInfo.url;
     }
 
-    const student = await Student.findByIdAndUpdate(
-      studentId,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('academicInfo.university academicInfo.department');
+    const student = await Student.findByIdAndUpdate(studentId, updateData, {
+      new: true,
+      runValidators: true,
+    }).populate("academicInfo.university academicInfo.department");
 
     res.status(200).json({
       success: true,
       data: student,
-      message: 'Profile updated successfully'
+      message: "Profile updated successfully",
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    console.error("Update profile error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -206,12 +209,12 @@ export const updateProfile = async (req, res) => {
 export const uploadResume = async (req, res) => {
   try {
     const studentId = req.user._id;
-    const { template = 'default', isActive = true } = req.body;
+    const { template = "default", isActive = true } = req.body;
 
     if (!req.fileInfo) {
       return res.status(400).json({
         success: false,
-        message: 'No resume file uploaded'
+        message: "No resume file uploaded",
       });
     }
 
@@ -221,15 +224,15 @@ export const uploadResume = async (req, res) => {
       url: req.fileInfo.url,
       template,
       isActive,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
     // Update student with new resume version
     const student = await Student.findById(studentId);
-    
+
     // If this is the active resume, deactivate others
     if (isActive) {
-      student.resumeVersions.forEach(resume => {
+      student.resumeVersions.forEach((resume) => {
         resume.isActive = false;
       });
     }
@@ -241,15 +244,15 @@ export const uploadResume = async (req, res) => {
       success: true,
       data: {
         resume: newVersion,
-        fileInfo: req.fileInfo
+        fileInfo: req.fileInfo,
       },
-      message: 'Resume uploaded successfully'
+      message: "Resume uploaded successfully",
     });
   } catch (error) {
-    console.error('Upload resume error:', error);
+    console.error("Upload resume error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -264,34 +267,37 @@ export const analyzeResume = async (req, res) => {
     if (!resumeText || !jobDescription) {
       return res.status(400).json({
         success: false,
-        message: 'Resume text and job description are required'
+        message: "Resume text and job description are required",
       });
     }
 
     // Use OpenAI to analyze resume-JD match
-    const analysis = await openaiService.analyzeResumeJDMatch(resumeText, jobDescription);
+    const analysis = await openaiService.analyzeResumeJDMatch(
+      resumeText,
+      jobDescription,
+    );
 
     // Store analysis in student record
     const student = await Student.findById(req.user._id);
-    
+
     // Add to a hypothetical analysis history (we can extend the model)
     const analysisRecord = {
-      type: 'resume_jd_match',
+      type: "resume_jd_match",
       result: analysis,
       timestamp: new Date(),
-      jobDescription: jobDescription.substring(0, 500) // Store first 500 chars for reference
+      jobDescription: jobDescription.substring(0, 500), // Store first 500 chars for reference
     };
 
     res.status(200).json({
       success: true,
       data: analysis,
-      message: 'Resume analysis completed successfully'
+      message: "Resume analysis completed successfully",
     });
   } catch (error) {
-    console.error('Analyze resume error:', error);
+    console.error("Analyze resume error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to analyze resume. Please try again.'
+      message: "Failed to analyze resume. Please try again.",
     });
   }
 };
@@ -303,12 +309,12 @@ export const getResumeAnalysis = async (req, res) => {
   try {
     const { resumeId } = req.params;
     const student = await Student.findById(req.user._id);
-    
+
     const resume = student.resumeVersions.id(resumeId);
     if (!resume) {
       return res.status(404).json({
         success: false,
-        message: 'Resume not found'
+        message: "Resume not found",
       });
     }
 
@@ -317,14 +323,14 @@ export const getResumeAnalysis = async (req, res) => {
       success: true,
       data: {
         resume,
-        message: 'Use the analyze endpoint to get AI-powered insights'
-      }
+        message: "Use the analyze endpoint to get AI-powered insights",
+      },
     });
   } catch (error) {
-    console.error('Get resume analysis error:', error);
+    console.error("Get resume analysis error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -339,23 +345,26 @@ export const improveResume = async (req, res) => {
     if (!resumeText) {
       return res.status(400).json({
         success: false,
-        message: 'Resume text is required'
+        message: "Resume text is required",
       });
     }
 
     // Use OpenAI to generate improvement suggestions
-    const improvements = await openaiService.generateResumeImprovements(resumeText, targetRole);
+    const improvements = await openaiService.generateResumeImprovements(
+      resumeText,
+      targetRole,
+    );
 
     res.status(200).json({
       success: true,
       data: improvements,
-      message: 'Resume improvement suggestions generated successfully'
+      message: "Resume improvement suggestions generated successfully",
     });
   } catch (error) {
-    console.error('Improve resume error:', error);
+    console.error("Improve resume error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate improvement suggestions. Please try again.'
+      message: "Failed to generate improvement suggestions. Please try again.",
     });
   }
 };
@@ -366,17 +375,17 @@ export const improveResume = async (req, res) => {
 export const getAllResumes = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id);
-    
+
     res.status(200).json({
       success: true,
       data: student.resumeVersions.sort((a, b) => b.createdAt - a.createdAt),
-      count: student.resumeVersions.length
+      count: student.resumeVersions.length,
     });
   } catch (error) {
-    console.error('Get all resumes error:', error);
+    console.error("Get all resumes error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -388,20 +397,26 @@ export const deleteResume = async (req, res) => {
   try {
     const { resumeId } = req.params;
     const student = await Student.findById(req.user._id);
-    
-    const resumeIndex = student.resumeVersions.findIndex(r => r._id.toString() === resumeId);
+
+    const resumeIndex = student.resumeVersions.findIndex(
+      (r) => r._id.toString() === resumeId,
+    );
     if (resumeIndex === -1) {
       return res.status(404).json({
         success: false,
-        message: 'Resume not found'
+        message: "Resume not found",
       });
     }
 
     const resume = student.resumeVersions[resumeIndex];
-    
+
     // Delete physical file
     if (resume.url) {
-      const filePath = path.join(process.cwd(), 'uploads', resume.url.replace('/uploads/', ''));
+      const filePath = path.join(
+        process.cwd(),
+        "uploads",
+        resume.url.replace("/uploads/", ""),
+      );
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -413,13 +428,13 @@ export const deleteResume = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Resume deleted successfully'
+      message: "Resume deleted successfully",
     });
   } catch (error) {
-    console.error('Delete resume error:', error);
+    console.error("Delete resume error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -435,19 +450,19 @@ export const uploadDocuments = async (req, res) => {
     if (!req.filesInfo || req.filesInfo.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No documents uploaded'
+        message: "No documents uploaded",
       });
     }
 
     const student = await Student.findById(studentId);
-    
+
     // Add documents to student record
-    const newDocuments = req.filesInfo.map(fileInfo => ({
-      type: type || 'other',
+    const newDocuments = req.filesInfo.map((fileInfo) => ({
+      type: type || "other",
       name: name || fileInfo.originalName,
       url: fileInfo.url,
       uploadDate: new Date(),
-      isVerified: false
+      isVerified: false,
     }));
 
     student.documents.push(...newDocuments);
@@ -456,13 +471,13 @@ export const uploadDocuments = async (req, res) => {
     res.status(200).json({
       success: true,
       data: newDocuments,
-      message: 'Documents uploaded successfully'
+      message: "Documents uploaded successfully",
     });
   } catch (error) {
-    console.error('Upload documents error:', error);
+    console.error("Upload documents error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -473,17 +488,17 @@ export const uploadDocuments = async (req, res) => {
 export const getDocuments = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id);
-    
+
     res.status(200).json({
       success: true,
       data: student.documents.sort((a, b) => b.uploadDate - a.uploadDate),
-      count: student.documents.length
+      count: student.documents.length,
     });
   } catch (error) {
-    console.error('Get documents error:', error);
+    console.error("Get documents error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -495,20 +510,26 @@ export const deleteDocument = async (req, res) => {
   try {
     const { documentId } = req.params;
     const student = await Student.findById(req.user._id);
-    
-    const documentIndex = student.documents.findIndex(d => d._id.toString() === documentId);
+
+    const documentIndex = student.documents.findIndex(
+      (d) => d._id.toString() === documentId,
+    );
     if (documentIndex === -1) {
       return res.status(404).json({
         success: false,
-        message: 'Document not found'
+        message: "Document not found",
       });
     }
 
     const document = student.documents[documentIndex];
-    
+
     // Delete physical file
     if (document.url) {
-      const filePath = path.join(process.cwd(), 'uploads', document.url.replace('/uploads/', ''));
+      const filePath = path.join(
+        process.cwd(),
+        "uploads",
+        document.url.replace("/uploads/", ""),
+      );
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -520,13 +541,13 @@ export const deleteDocument = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Document deleted successfully'
+      message: "Document deleted successfully",
     });
   } catch (error) {
-    console.error('Delete document error:', error);
+    console.error("Delete document error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -538,27 +559,28 @@ export const verifyDocument = async (req, res) => {
   try {
     const { documentId } = req.params;
     const student = await Student.findById(req.user._id);
-    
+
     const document = student.documents.id(documentId);
     if (!document) {
       return res.status(404).json({
         success: false,
-        message: 'Document not found'
+        message: "Document not found",
       });
     }
 
     // This would typically trigger a workflow for university admin to verify
     // For now, we'll just mark it as pending verification
-    
+
     res.status(200).json({
       success: true,
-      message: 'Verification request submitted. University admin will review your document.'
+      message:
+        "Verification request submitted. University admin will review your document.",
     });
   } catch (error) {
-    console.error('Verify document error:', error);
+    console.error("Verify document error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -568,31 +590,35 @@ export const verifyDocument = async (req, res) => {
 // @access  Private (Student)
 export const getPlacementDrives = async (req, res) => {
   try {
-    const student = await Student.findById(req.user._id).populate('academicInfo.university academicInfo.department');
-    
+    const student = await Student.findById(req.user._id).populate(
+      "academicInfo.university academicInfo.department",
+    );
+
     // Find drives that student is eligible for
     const drives = await PlacementDrive.find({
       university: student.academicInfo.university._id,
-      status: 'active',
-      'timeline.registrationEnd': { $gte: new Date() },
-      'eligibilityCriteria.minimumCGPA': { $lte: student.academicInfo.cgpa },
-      'eligibilityCriteria.courses': { $in: [student.academicInfo.course] },
-      'eligibilityCriteria.departments': { $in: [student.academicInfo.department._id] },
-      'eligibilityCriteria.batches': { $in: [student.academicInfo.batch] }
+      status: "active",
+      "timeline.registrationEnd": { $gte: new Date() },
+      "eligibilityCriteria.minimumCGPA": { $lte: student.academicInfo.cgpa },
+      "eligibilityCriteria.courses": { $in: [student.academicInfo.course] },
+      "eligibilityCriteria.departments": {
+        $in: [student.academicInfo.department._id],
+      },
+      "eligibilityCriteria.batches": { $in: [student.academicInfo.batch] },
     })
-    .populate('company', 'name companyDetails.sector')
-    .sort({ 'timeline.registrationEnd': 1 });
+      .populate("company", "name companyDetails.sector")
+      .sort({ "timeline.registrationEnd": 1 });
 
     res.status(200).json({
       success: true,
       data: drives,
-      count: drives.length
+      count: drives.length,
     });
   } catch (error) {
-    console.error('Get placement drives error:', error);
+    console.error("Get placement drives error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -609,13 +635,13 @@ export const applyToDrive = async (req, res) => {
     // Check if already applied
     const existingApplication = await Application.findOne({
       student: studentId,
-      placementDrive: driveId
+      placementDrive: driveId,
     });
 
     if (existingApplication) {
       return res.status(400).json({
         success: false,
-        message: 'You have already applied to this drive'
+        message: "You have already applied to this drive",
       });
     }
 
@@ -623,7 +649,7 @@ export const applyToDrive = async (req, res) => {
     if (!drive) {
       return res.status(404).json({
         success: false,
-        message: 'Placement drive not found'
+        message: "Placement drive not found",
       });
     }
 
@@ -638,8 +664,8 @@ export const applyToDrive = async (req, res) => {
       selectionRounds: drive.selectionProcess.rounds.map((round, index) => ({
         round: round.type,
         roundOrder: index + 1,
-        status: 'scheduled'
-      }))
+        status: "scheduled",
+      })),
     });
 
     // Add application to student and drive
@@ -653,13 +679,13 @@ export const applyToDrive = async (req, res) => {
     res.status(201).json({
       success: true,
       data: application,
-      message: 'Application submitted successfully'
+      message: "Application submitted successfully",
     });
   } catch (error) {
-    console.error('Apply to drive error:', error);
+    console.error("Apply to drive error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -670,20 +696,20 @@ export const applyToDrive = async (req, res) => {
 export const getApplications = async (req, res) => {
   try {
     const applications = await Application.find({ student: req.user._id })
-      .populate('placementDrive', 'title jobDetails timeline')
-      .populate('company', 'name companyDetails.sector')
-      .sort({ 'timeline.appliedAt': -1 });
+      .populate("placementDrive", "title jobDetails timeline")
+      .populate("company", "name companyDetails.sector")
+      .sort({ "timeline.appliedAt": -1 });
 
     res.status(200).json({
       success: true,
       data: applications,
-      count: applications.length
+      count: applications.length,
     });
   } catch (error) {
-    console.error('Get applications error:', error);
+    console.error("Get applications error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -694,31 +720,31 @@ export const getApplications = async (req, res) => {
 export const getApplicationDetails = async (req, res) => {
   try {
     const { applicationId } = req.params;
-    
+
     const application = await Application.findOne({
       _id: applicationId,
-      student: req.user._id
+      student: req.user._id,
     })
-    .populate('placementDrive')
-    .populate('company')
-    .populate('university');
+      .populate("placementDrive")
+      .populate("company")
+      .populate("university");
 
     if (!application) {
       return res.status(404).json({
         success: false,
-        message: 'Application not found'
+        message: "Application not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: application
+      data: application,
     });
   } catch (error) {
-    console.error('Get application details error:', error);
+    console.error("Get application details error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -733,42 +759,46 @@ export const withdrawApplication = async (req, res) => {
 
     const application = await Application.findOne({
       _id: applicationId,
-      student: req.user._id
+      student: req.user._id,
     });
 
     if (!application) {
       return res.status(404).json({
         success: false,
-        message: 'Application not found'
+        message: "Application not found",
       });
     }
 
-    if (['selected', 'offer_received', 'offer_accepted'].includes(application.applicationStatus)) {
+    if (
+      ["selected", "offer_received", "offer_accepted"].includes(
+        application.applicationStatus,
+      )
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot withdraw application at this stage'
+        message: "Cannot withdraw application at this stage",
       });
     }
 
     application.withdrawalInfo = {
       isWithdrawn: true,
       withdrawnAt: new Date(),
-      reason: reason || 'Student withdrawal',
-      withdrawnBy: 'student'
+      reason: reason || "Student withdrawal",
+      withdrawnBy: "student",
     };
-    
-    application.applicationStatus = 'rejected';
+
+    application.applicationStatus = "rejected";
     await application.save();
 
     res.status(200).json({
       success: true,
-      message: 'Application withdrawn successfully'
+      message: "Application withdrawn successfully",
     });
   } catch (error) {
-    console.error('Withdraw application error:', error);
+    console.error("Withdraw application error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -779,20 +809,20 @@ export const withdrawApplication = async (req, res) => {
 export const getOffers = async (req, res) => {
   try {
     const offers = await Offer.find({ student: req.user._id })
-      .populate('company', 'name companyDetails')
-      .populate('placementDrive', 'title')
-      .sort({ 'timeline.issuedAt': -1 });
+      .populate("company", "name companyDetails")
+      .populate("placementDrive", "title")
+      .sort({ "timeline.issuedAt": -1 });
 
     res.status(200).json({
       success: true,
       data: offers,
-      count: offers.length
+      count: offers.length,
     });
   } catch (error) {
-    console.error('Get offers error:', error);
+    console.error("Get offers error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -803,31 +833,31 @@ export const getOffers = async (req, res) => {
 export const getOfferDetails = async (req, res) => {
   try {
     const { offerId } = req.params;
-    
+
     const offer = await Offer.findOne({
       _id: offerId,
-      student: req.user._id
+      student: req.user._id,
     })
-    .populate('company')
-    .populate('placementDrive')
-    .populate('application');
+      .populate("company")
+      .populate("placementDrive")
+      .populate("application");
 
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: offer
+      data: offer,
     });
   } catch (error) {
-    console.error('Get offer details error:', error);
+    console.error("Get offer details error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -842,58 +872,58 @@ export const respondToOffer = async (req, res) => {
 
     const offer = await Offer.findOne({
       _id: offerId,
-      student: req.user._id
+      student: req.user._id,
     });
 
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
-    if (offer.status !== 'pending') {
+    if (offer.status !== "pending") {
       return res.status(400).json({
         success: false,
-        message: 'Offer is no longer pending'
+        message: "Offer is no longer pending",
       });
     }
 
     if (!offer.isValid) {
       return res.status(400).json({
         success: false,
-        message: 'Offer has expired'
+        message: "Offer has expired",
       });
     }
 
     let result;
     switch (response) {
-      case 'accept':
+      case "accept":
         result = await offer.accept(message);
         break;
-      case 'reject':
+      case "reject":
         result = await offer.reject(message);
         break;
-      case 'counter':
+      case "counter":
         result = await offer.counterOffer(counterOffer);
         break;
       default:
         return res.status(400).json({
           success: false,
-          message: 'Invalid response type'
+          message: "Invalid response type",
         });
     }
 
     res.status(200).json({
       success: true,
       data: result,
-      message: `Offer ${response}ed successfully`
+      message: `Offer ${response}ed successfully`,
     });
   } catch (error) {
-    console.error('Respond to offer error:', error);
+    console.error("Respond to offer error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -904,26 +934,26 @@ export const respondToOffer = async (req, res) => {
 export const requestProfileVerification = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id);
-    
-    if (student.verificationStatus === 'pending') {
+
+    if (student.verificationStatus === "pending") {
       return res.status(400).json({
         success: false,
-        message: 'Verification request already pending'
+        message: "Verification request already pending",
       });
     }
 
-    student.verificationStatus = 'pending';
+    student.verificationStatus = "pending";
     await student.save();
 
     res.status(200).json({
       success: true,
-      message: 'Verification request submitted successfully'
+      message: "Verification request submitted successfully",
     });
   } catch (error) {
-    console.error('Request verification error:', error);
+    console.error("Request verification error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -935,14 +965,17 @@ export const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    const student = await Student.findById(req.user._id).select('+password');
+    const student = await Student.findById(req.user._id).select("+password");
 
     // Check current password
-    const isCurrentPasswordCorrect = await student.correctPassword(currentPassword, student.password);
+    const isCurrentPasswordCorrect = await student.correctPassword(
+      currentPassword,
+      student.password,
+    );
     if (!isCurrentPasswordCorrect) {
       return res.status(400).json({
         success: false,
-        message: 'Current password is incorrect'
+        message: "Current password is incorrect",
       });
     }
 
@@ -951,13 +984,13 @@ export const updatePassword = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Password updated successfully'
+      message: "Password updated successfully",
     });
   } catch (error) {
-    console.error('Update password error:', error);
+    console.error("Update password error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -968,11 +1001,11 @@ export const updatePassword = async (req, res) => {
 export const getStats = async (req, res) => {
   try {
     const studentId = req.user._id;
-    
+
     const [applications, offers, student] = await Promise.all([
       Application.countDocuments({ student: studentId }),
       Offer.countDocuments({ student: studentId }),
-      Student.findById(studentId)
+      Student.findById(studentId),
     ]);
 
     const stats = {
@@ -982,18 +1015,18 @@ export const getStats = async (req, res) => {
       totalResumes: student.resumeVersions.length,
       totalDocuments: student.documents.length,
       verificationStatus: student.verificationStatus,
-      placementStatus: student.placementStatus
+      placementStatus: student.placementStatus,
     };
 
     res.status(200).json({
       success: true,
-      data: stats
+      data: stats,
     });
   } catch (error) {
-    console.error('Get stats error:', error);
+    console.error("Get stats error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -1004,9 +1037,9 @@ export const getStats = async (req, res) => {
 export const exportProfile = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id)
-      .populate('academicInfo.university academicInfo.department')
-      .populate('applications')
-      .populate('offers');
+      .populate("academicInfo.university academicInfo.department")
+      .populate("applications")
+      .populate("offers");
 
     // Remove sensitive fields
     const exportData = student.toObject();
@@ -1019,13 +1052,13 @@ export const exportProfile = async (req, res) => {
       success: true,
       data: exportData,
       exportedAt: new Date(),
-      message: 'Profile data exported successfully'
+      message: "Profile data exported successfully",
     });
   } catch (error) {
-    console.error('Export profile error:', error);
+    console.error("Export profile error:", error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };

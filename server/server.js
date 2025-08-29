@@ -1,31 +1,31 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import compression from 'compression';
-import rateLimit from 'express-rate-limit';
-import mongoose from 'mongoose';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import helmet from "helmet";
+import morgan from "morgan";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Import database connection
-import connectDB from './config/database.js';
+import connectDB from "./config/database.js";
 
 // Import routes
-import studentRoutes from './routes/studentRoutes.js';
-import companyRoutes from './routes/companyRoutes.js';
-import universityRoutes from './routes/universityRoutes.js';
-import placementDriveRoutes from './routes/placementDriveRoutes.js';
-import applicationRoutes from './routes/applicationRoutes.js';
-import offerRoutes from './routes/offerRoutes.js';
-import authRoutes from './routes/authRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
-import aiRoutes from './routes/aiRoutes.js';
+import studentRoutes from "./routes/studentRoutes.js";
+import companyRoutes from "./routes/companyRoutes.js";
+import universityRoutes from "./routes/universityRoutes.js";
+import placementDriveRoutes from "./routes/placementDriveRoutes.js";
+import applicationRoutes from "./routes/applicationRoutes.js";
+import offerRoutes from "./routes/offerRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 // Import middleware
-import { errorHandler } from './middlewares/errorHandler.js';
-import { notFound } from './middlewares/notFound.js';
+import { errorHandler } from "./middlewares/errorHandler.js";
+import { notFound } from "./middlewares/notFound.js";
 
 // Load environment variables
 dotenv.config();
@@ -41,17 +41,21 @@ const app = express();
 connectDB();
 
 // Security middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token']
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
+  }),
+);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -59,10 +63,10 @@ const limiter = rateLimit({
   max: 1000, // Limit each IP to 1000 requests per windowMs
   message: {
     success: false,
-    message: 'Too many requests from this IP, please try again later.'
+    message: "Too many requests from this IP, please try again later.",
   },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
 });
 
 app.use(limiter);
@@ -71,32 +75,33 @@ app.use(limiter);
 app.use(compression());
 
 // Logging middleware
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
 } else {
-  app.use(morgan('combined'));
+  app.use(morgan("combined"));
 }
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Static files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'UniNest API is running',
+    message: "UniNest API is running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
   });
 });
 
 // API routes
-const API_PREFIX = process.env.BASE_URL || '/api/v1';
+const API_PREFIX = process.env.BASE_URL || "/api/v1";
 
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/students`, studentRoutes);
@@ -109,14 +114,14 @@ app.use(`${API_PREFIX}/admin`, adminRoutes);
 app.use(`${API_PREFIX}/ai`, aiRoutes);
 
 // Welcome route
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Welcome to UniNest API - AI-Powered Campus Recruitment Portal',
-    version: '1.0.0',
-    documentation: `${req.protocol}://${req.get('host')}/api/docs`,
+    message: "Welcome to UniNest API - AI-Powered Campus Recruitment Portal",
+    version: "1.0.0",
+    documentation: `${req.protocol}://${req.get("host")}/api/docs`,
     endpoints: {
-      health: '/health',
+      health: "/health",
       auth: `${API_PREFIX}/auth`,
       students: `${API_PREFIX}/students`,
       companies: `${API_PREFIX}/companies`,
@@ -125,8 +130,8 @@ app.get('/', (req, res) => {
       applications: `${API_PREFIX}/applications`,
       offers: `${API_PREFIX}/offers`,
       admin: `${API_PREFIX}/admin`,
-      ai: `${API_PREFIX}/ai`
-    }
+      ai: `${API_PREFIX}/ai`,
+    },
   });
 });
 
@@ -136,7 +141,7 @@ app.use(errorHandler);
 
 // Server configuration
 const PORT = process.env.PORT || 8000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const NODE_ENV = process.env.NODE_ENV || "development";
 
 // Start server
 const server = app.listen(PORT, () => {
@@ -152,31 +157,31 @@ const server = app.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('🔄 SIGTERM received. Shutting down gracefully...');
+process.on("SIGTERM", () => {
+  console.log("🔄 SIGTERM received. Shutting down gracefully...");
   server.close(() => {
-    console.log('✅ Process terminated');
+    console.log("✅ Process terminated");
   });
 });
 
-process.on('SIGINT', () => {
-  console.log('🔄 SIGINT received. Shutting down gracefully...');
+process.on("SIGINT", () => {
+  console.log("🔄 SIGINT received. Shutting down gracefully...");
   server.close(() => {
-    console.log('✅ Process terminated');
+    console.log("✅ Process terminated");
   });
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-  console.error('❌ Unhandled Promise Rejection:', err.message);
+process.on("unhandledRejection", (err, promise) => {
+  console.error("❌ Unhandled Promise Rejection:", err.message);
   server.close(() => {
     process.exit(1);
   });
 });
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err.message);
+process.on("uncaughtException", (err) => {
+  console.error("❌ Uncaught Exception:", err.message);
   process.exit(1);
 });
 
